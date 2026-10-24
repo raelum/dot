@@ -1,2 +1,6 @@
+## Communication
 - Speak highly concisely
-- Use nested bullet lists instead of markdown tables
+- Do not use markdown tables
+
+## Code
+- Write simplified, intuitive code with concise inline comments
