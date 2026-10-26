@@ -12,4 +12,4 @@ else
     POS_ARGS=""
 fi
 
-tmux display-popup -E -w "$POPUP_W" -h 80% $POS_ARGS -d "$HOME/code" -T " todo " "nvim ~/code/todo.md"
+tmux display-popup -E -w "$POPUP_W" -h 80% $POS_ARGS -d "$HOME/code" -T " todo " "TODO_POPUP=1 nvim ~/code/todo.md"

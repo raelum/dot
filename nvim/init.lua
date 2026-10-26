@@ -224,20 +224,28 @@ vim.keymap.set("n", "<leader>r", reload_config, { desc = "Reload Neovim configur
 -- Send Code to Antigravity CLI (<leader>a)
 -- Yanks selection (or current line), sends to agy pane in Tmux with bracketed paste,
 -- inserts two newlines (Ctrl+J), and switches focus directly to the agy prompt.
+-- Auto-closes the popup if triggered from the floating todo popup.
 -- =============================================================================
 local function send_to_agy(text)
   if not text or vim.trim(text) == "" then return end
 
-  -- Atomic Tmux execution targeting the last active pane/window
+  -- Send text with bracketed paste, submit prompt, and switch focus to agy
   vim.system({
     "tmux",
-    "copy-mode", "-q", "-t", "{last}",
+    "copy-mode", "-q", "-t", ":agy",
     ";", "load-buffer", "-b", "agy_input", "-",
-    ";", "paste-buffer", "-p", "-t", "{last}", "-b", "agy_input",
-    ";", "send-keys", "-t", "{last}", "C-j", "C-j",
-    ";", "select-window", "-t", "{last}",
-    ";", "select-pane", "-t", "{last}",
+    ";", "paste-buffer", "-p", "-t", ":agy", "-b", "agy_input",
+    ";", "send-keys", "-t", ":agy", "C-j", "C-j",
+    ";", "select-window", "-t", ":agy",
+    ";", "select-pane", "-t", ":agy",
   }, { stdin = text }):wait()
+
+  -- Auto-close popup if running inside the floating todo popup
+  if vim.env.TODO_POPUP == "1" then
+    vim.schedule(function()
+      vim.cmd("wq")
+    end)
+  end
 end
 
 vim.keymap.set("n", "<leader>a", function()
