@@ -257,3 +257,9 @@ vim.keymap.set("x", "<leader>a", function()
   send_to_agy(vim.fn.getreg("z"))
 end, { desc = "Send visual selection to agy" })
 
+-- Save and quit todo popup with 'q' in normal mode
+if vim.env.TODO_POPUP == "1" then
+  vim.keymap.set("n", "q", "<cmd>wq<CR>", { silent = true, desc = "Save and quit todo popup" })
+end
+
+
