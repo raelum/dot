@@ -172,32 +172,25 @@ vim.keymap.set("n", "<leader>q", "<cmd>x<CR>", { desc = "Save and quit current b
 vim.keymap.set("n", "<leader>Q", "<cmd>q!<CR>", { desc = "Quit without saving" })
 
 -- =============================================================================
--- Quick Escape (jk with timeout)
+-- Quick Escape (kk with timeout)
 -- =============================================================================
-local last_j_time = 0
+local last_k_time = 0
 local quick_escape_timeout_ms = 300
 
--- Record timestamp on 'j' and insert it immediately without input lag
-vim.keymap.set("i", "j", function()
-  last_j_time = (vim.uv or vim.loop).now()
-  return "j"
-end, { expr = true, desc = "Track j timestamp for jk escape" })
-
--- Check if 'k' immediately follows 'j' within the timeout threshold
+-- Escape to Normal mode on double-tap 'k' within timeout
 vim.keymap.set("i", "k", function()
   local now = (vim.uv or vim.loop).now()
   local col = vim.fn.col(".")
   local prev_char = col > 1 and vim.fn.getline("."):sub(col - 1, col - 1) or ""
 
-  local is_recent = (now - last_j_time) <= quick_escape_timeout_ms
-  local preceded_by_j = prev_char == "j"
-  if is_recent and preceded_by_j then
-    last_j_time = 0
-    return "<BS><Esc>" -- Delete 'j' and exit to Normal mode
+  if (now - last_k_time) <= quick_escape_timeout_ms and prev_char == "k" then
+    last_k_time = 0
+    return "<BS><Esc>" -- Delete previous 'k' and exit to Normal mode
   end
 
+  last_k_time = now
   return "k"
-end, { expr = true, desc = "Escape to Normal mode on fast jk" })
+end, { expr = true, desc = "Escape to Normal mode on fast kk" })
 
 -- =============================================================================
 -- Generic Configuration Reload Shortcut (<leader>r)
