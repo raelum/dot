@@ -412,6 +412,17 @@ local function open_jj_files_menu()
     end
   end
 
+  -- Auto-refresh status menu when switching back to Neovim
+  vim.api.nvim_create_autocmd("FocusGained", {
+    buffer = buf,
+    callback = function()
+      if win and vim.api.nvim_win_is_valid(win) then
+        local cur_row = vim.api.nvim_win_get_cursor(win)[1]
+        render(cur_row)
+      end
+    end,
+  })
+
   -- Keybindings for the menu
   vim.keymap.set("n", "<CR>",  open_entry,       { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "a",     stage_entry,      { buffer = buf, nowait = true, silent = true })
