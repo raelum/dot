@@ -397,7 +397,7 @@ local function open_jj_files_menu()
     if res then
       vim.notify("✓ Successfully pushed to remote!", vim.log.levels.INFO)
       M.refresh_all_diffs()
-      render()
+      close_win()
     end
   end
 
