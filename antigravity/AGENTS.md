@@ -8,4 +8,4 @@
 - Push back against over-engineering
 
 ## Code
-- Write simple, intuitive code with concise inline comments
+- Write short, intuitive code with concise inline comments
