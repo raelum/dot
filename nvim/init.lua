@@ -13,6 +13,7 @@ vim.opt.mouse = "a"
 vim.opt.number = true
 vim.opt.relativenumber = false
 vim.opt.termguicolors = true
+vim.cmd("colorscheme retrobox")
 vim.opt.signcolumn = "yes"
 vim.opt.scrolloff = 4
 vim.opt.wrap = true
@@ -97,12 +98,28 @@ if not _G._lazy_did_setup then
   require("lazy").setup({
     spec = {
       { "echasnovski/mini.diff", version = false },
+      {
+        "nvim-treesitter/nvim-treesitter",
+        lazy = false,
+        build = ":TSUpdate",
+        config = function()
+          require("nvim-treesitter").setup()
+        end,
+      },
     },
     install = { colorscheme = { "habamax" } },
     checker = { enabled = false }, -- Avoid background git polls on mobile battery
   })
   _G._lazy_did_setup = true
 end
+
+-- Treesitter highlighting only for kotlin, lua, and markdown
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "kotlin", "lua", "markdown" },
+  callback = function()
+    pcall(vim.treesitter.start)
+  end,
+})
 
 -- =============================================================================
 -- Jujutsu Tools & Git Diff Integration (mini.diff)
