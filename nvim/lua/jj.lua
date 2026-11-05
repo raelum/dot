@@ -382,7 +382,23 @@ local function open_jj_files_menu()
       return vim.notify("Staged commit has no file changes to push", vim.log.levels.WARN)
     end
 
-    if not confirm_yn("Push staged commit to remote?") then
+    local remotes = run_jj({ "git", "remote", "list" })
+    local repo_name = vim.fs.basename(repo_root)
+
+    -- Single prompt: create & push if no remote, otherwise normal push
+    if not remotes or #remotes == 0 then
+      if not confirm_yn("Create private GitHub repo '" .. repo_name .. "' and push?") then
+        return
+      end
+      local gh_res = vim.system(
+        { "gh", "repo", "create", repo_name, "--private", "--source=" .. repo_root, "--remote=origin" },
+        { cwd = repo_root, text = true }
+      ):wait()
+      if gh_res.code ~= 0 then
+        local err = (gh_res.stderr and vim.trim(gh_res.stderr) ~= "") and vim.trim(gh_res.stderr) or "Failed to create repo"
+        return vim.notify("GitHub error: " .. err, vim.log.levels.ERROR)
+      end
+    elseif not confirm_yn("Push staged commit to remote?") then
       return
     end
 
@@ -393,8 +409,7 @@ local function open_jj_files_menu()
     run_jj({ "bookmark", "set", bookmark_name, "-r", "@-" }, true)
 
     vim.notify("Pushing to remote...", vim.log.levels.INFO)
-    local res = run_jj({ "git", "push" }, true)
-    if res then
+    if run_jj({ "git", "push", "--bookmark", bookmark_name }, true) then
       vim.notify("✓ Successfully pushed to remote!", vim.log.levels.INFO)
       M.refresh_all_diffs()
       close_win()
