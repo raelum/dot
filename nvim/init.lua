@@ -113,9 +113,15 @@ if not _G._lazy_did_setup then
   _G._lazy_did_setup = true
 end
 
--- Treesitter highlighting only for kotlin, lua, and markdown
+-- Treesitter highlighting
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "kotlin", "lua", "markdown" },
+  pattern = {
+    "c",
+    "cpp",
+    "kotlin",
+    "lua",
+    "markdown",
+  },
   callback = function()
     pcall(vim.treesitter.start)
   end,
