@@ -30,12 +30,14 @@ def check_command(cmd: str) -> dict:
             "reason": "Destructive deletion of root, home, or naked wildcards is prohibited."
         }
 
-    # Enforce Jujutsu over Git
-    if re.search(r"(?:^|[;&|]\s*)git(?:\s+.*|$)", cmd):
-        return {
-            "decision": "deny",
-            "reason": "Prefer using Jujutsu (jj) for all version control."
-        }
+    # Enforce Jujutsu over Git (allow git submodule commands)
+    for match in re.finditer(r"(?:^|[;&|]\s*)git(?:\s+(.*?))?(?=[;&|]|$)", cmd):
+        args_str = (match.group(1) or "").strip()
+        if not re.search(r"^submodule\b", args_str):
+            return {
+                "decision": "deny",
+                "reason": "Prefer using Jujutsu (jj) for all version control."
+            }
 
     # Restrict Jujutsu (jj) to read-only subcommands
     for match in re.finditer(r"(?:^|[;&|]\s*)jj(?:\s+(.*?))?(?=[;&|]|$)", cmd):
