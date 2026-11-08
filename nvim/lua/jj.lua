@@ -406,6 +406,7 @@ local function open_jj_files_menu()
     local bm_res = run_jj({ "log", "-r", "heads(::@- & bookmarks())", "-T", "bookmarks", "--no-graph" })
     local bm_raw = (bm_res and bm_res[1] and vim.trim(bm_res[1]) ~= "") and vim.trim(bm_res[1]) or "main"
     local bookmark_name = vim.split(bm_raw, "%s+")[1]
+    run_jj({ "bookmark", "track", bookmark_name })
     run_jj({ "bookmark", "set", bookmark_name, "-r", "@-" }, true)
 
     vim.notify("Pushing to remote...", vim.log.levels.INFO)
