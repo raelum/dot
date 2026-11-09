@@ -1,0 +1,16 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+# Candidate script locations in order of precedence.
+scripts=(
+  # Consumer repositories containing pika as a submodule.
+  "pika/prep"
+  # Directly inside the standalone pika repository.
+  "prep"
+)
+
+for script in "${scripts[@]}"; do
+  [ -f "$script" ] && exec bash "$script" "$@"
+done
+
+echo "Error: prep not found in . or pika/" >&2
+exit 1

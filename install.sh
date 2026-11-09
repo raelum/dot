@@ -49,6 +49,9 @@ link_config "$DOTFILES_DIR/antigravity/skills" "$HOME/.gemini/config/skills"
 link_config "$DOTFILES_DIR/antigravity/hooks.json" "$HOME/.gemini/config/hooks.json"
 link_config "$DOTFILES_DIR/antigravity/scripts" "$HOME/.gemini/config/scripts"
 
+# 6. Global CLI Utilities
+link_config "$DOTFILES_DIR/bin/prep" "${PREFIX:-/data/data/com.termux/files/usr}/bin/prep"
+
 # ==============================================================================
 # Tmux Plugins
 # ==============================================================================
