@@ -1,5 +1,6 @@
 {
   "lazy.nvim": { "branch": "main", "commit": "306a05526ada86a7b30af95c5cc81ffba93fef97" },
-  "mini.diff": { "branch": "main", "commit": "47ab8cf21c62cfd952008f2b9e79417c98173ec1" },
-  "nvim-treesitter": { "branch": "main", "commit": "a2f694478be07f89c2d03cc17858a8745a400c4b" }
+  "mini.diff": { "branch": "main", "commit": "91d6ce4b7f400439fe761f01a58280f2c0f99c01" },
+  "mini.pick": { "branch": "main", "commit": "406d41308e58486ea5c3352f5821c4cd9992af65" },
+  "nvim-treesitter": { "branch": "main", "commit": "37e52c733ada9d8d544d53a763140ef1ba404353" }
 }

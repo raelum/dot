@@ -40,6 +40,46 @@ local function confirm_yn(prompt)
   return char == "y" or char == "Y"
 end
 
+-- Parse `jj diff --summary` output into structured file entries with status
+local function parse_entries(raw_lines, section, repo_root)
+  local entries = {}
+  for _, line in ipairs(raw_lines or {}) do
+    local status = line:sub(1, 1)
+    local path_part = vim.trim(line:sub(3))
+    local old_path, new_path = nil, path_part
+    -- Handle renames ('R'): compact 'prefix/{old => new}/suffix' or full 'old => new'
+    if status == "R" then
+      local prefix, old_sub, new_sub, suffix = path_part:match("^(.-)%{(.-)%s*=>%s*(.-)%}(.*)$")
+      if prefix then
+        old_path = prefix .. old_sub .. suffix
+        new_path = prefix .. new_sub .. suffix
+      else
+        local old_p, new_p = path_part:match("^(.-)%s*=>%s*(.-)$")
+        if old_p then
+          old_path = old_p
+          new_path = new_p
+        end
+      end
+    end
+
+    -- Renames require both old and new paths so JJ can stage/restore them atomically
+    local vcs_paths = { new_path }
+    if old_path and old_path ~= new_path then
+      vcs_paths = { old_path, new_path }
+    end
+
+    local edit_path = (repo_root and (repo_root .. "/") or "") .. new_path
+    table.insert(entries, {
+      section = section,
+      status = status,
+      display_path = path_part,
+      edit_path = edit_path,
+      vcs_paths = vcs_paths,
+    })
+  end
+  return entries
+end
+
 -- =============================================================================
 -- Jujutsu Diff Reference Adapter (for mini.diff)
 -- =============================================================================
@@ -136,52 +176,13 @@ local function open_jj_files_menu()
 
   local line_to_entry = {}
 
-  -- Parse `jj diff --summary` output into structured file entries with status
-  local function parse_entries(raw_lines, section)
-    local entries = {}
-    for _, line in ipairs(raw_lines or {}) do
-      local status = line:sub(1, 1)
-      local path_part = vim.trim(line:sub(3))
-      local old_path, new_path = nil, path_part
-      -- Handle renames ('R'): compact 'prefix/{old => new}/suffix' or full 'old => new'
-      if status == "R" then
-        local prefix, old_sub, new_sub, suffix = path_part:match("^(.-)%{(.-)%s*=>%s*(.-)%}(.*)$")
-        if prefix then
-          old_path = prefix .. old_sub .. suffix
-          new_path = prefix .. new_sub .. suffix
-        else
-          local old_p, new_p = path_part:match("^(.-)%s*=>%s*(.-)$")
-          if old_p then
-            old_path = old_p
-            new_path = new_p
-          end
-        end
-      end
-
-      -- Renames require both old and new paths so JJ can stage/restore them atomically
-      local vcs_paths = { new_path }
-      if old_path and old_path ~= new_path then
-        vcs_paths = { old_path, new_path }
-      end
-
-      table.insert(entries, {
-        section = section,
-        status = status,
-        display_path = path_part,
-        edit_path = repo_root .. "/" .. new_path,
-        vcs_paths = vcs_paths,
-      })
-    end
-    return entries
-  end
-
   -- Build buffer lines, apply syntax highlights, and position floating window
   local function render(target_row)
-    local working_entries = parse_entries(run_jj({ "diff", "-r", "@-..@", "--summary" }), "working")
+    local working_entries = parse_entries(run_jj({ "diff", "-r", "@-..@", "--summary" }), "working", repo_root)
     local staged_entries = {}
     local has_staged = M.has_staged_commit()
     if has_staged then
-      staged_entries = parse_entries(run_jj({ "diff", "-r", "@--..@-", "--summary" }), "staged")
+      staged_entries = parse_entries(run_jj({ "diff", "-r", "@--..@-", "--summary" }), "staged", repo_root)
     end
 
     local buf_lines = {}
@@ -515,6 +516,24 @@ function M.setup_diff_wrap()
   end
 
   _G._minidiff_virt_lines_wrapped = true
+end
+
+-- Return path of first non-deleted modified file in working copy (or staged commit)
+function M.get_first_modified_file(dir)
+  local repo_root = vim.fs.root(dir, ".jj")
+  if not repo_root then return nil end
+
+  local entries = parse_entries(run_jj({ "diff", "-r", "@-..@", "--summary" }), "working", repo_root)
+  if #entries == 0 and M.has_staged_commit() then
+    entries = parse_entries(run_jj({ "diff", "-r", "@--..@-", "--summary" }), "staged", repo_root)
+  end
+
+  for _, item in ipairs(entries) do
+    if item.status ~= "D" and vim.fn.filereadable(item.edit_path) == 1 then
+      return item.edit_path
+    end
+  end
+  return nil
 end
 
 function M.setup()

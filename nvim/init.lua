@@ -99,6 +99,28 @@ if not _G._lazy_did_setup then
     spec = {
       { "echasnovski/mini.diff", version = false },
       {
+        "echasnovski/mini.pick",
+        version = false,
+        config = function()
+          require("mini.pick").setup({
+            window = {
+              config = function()
+                local height = math.floor(0.6 * vim.o.lines)
+                local width = math.min(50, vim.o.columns - 4)
+                return {
+                  anchor = "NW",
+                  height = height,
+                  width = width,
+                  row = math.floor(0.5 * (vim.o.lines - height)),
+                  col = math.floor(0.5 * (vim.o.columns - width)),
+                  border = "rounded",
+                }
+              end,
+            },
+          })
+        end,
+      },
+      {
         "nvim-treesitter/nvim-treesitter",
         lazy = false,
         build = ":TSUpdate",
@@ -132,6 +154,8 @@ vim.api.nvim_create_autocmd("FileType", {
 -- =============================================================================
 local jj = require("jj")
 jj.setup()
+
+require("projects").setup()
 
 local has_minidiff, minidiff = pcall(require, "mini.diff")
 if has_minidiff then
