@@ -7,6 +7,28 @@ Protects terminal output by ignoring taps outside prompt bounds.
 import re
 import subprocess
 import sys
+import unicodedata
+
+# Full-width horizontal rule used by TUI prompt boxes (e.g. agy)
+DIVIDER_RE = re.compile(r'^─{20,}$')
+# Standard shell prompt at start of line (e.g. "~/code $ ", "$ ", "> ", "❯ ")
+SHELL_PROMPT_RE = re.compile(r'^[^\s]*\s*[$%#❯>](?:\s|$)')
+
+def is_divider(line):
+    # Real TUI dividers start at column 0 (no leading prompt indentation)
+    return bool(DIVIDER_RE.match(line.rstrip()))
+
+def col_to_char_idx(line, target_col):
+    """Maps a terminal column coordinate to a character index (clamped to text end)."""
+    trimmed = line.rstrip()
+    col = 0
+    for idx, ch in enumerate(trimmed):
+        if col >= target_col:
+            return idx
+        if unicodedata.combining(ch):
+            continue
+        col += 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+    return len(trimmed)
 
 def detect_prompt_bounds(lines, cursor_y):
     """
@@ -16,24 +38,32 @@ def detect_prompt_bounds(lines, cursor_y):
     if cursor_y < 0 or cursor_y >= len(lines):
         return None
 
-    # Scan upward from cursor_y to find prompt start
+    # 1. Boxed TUI prompt (e.g. agy): strictly enclosed by full-width dividers
+    top_div = next((y for y in range(cursor_y - 1, -1, -1) if is_divider(lines[y])), None)
+    bot_div = next(
+        (y for y in range(cursor_y + 1, len(lines)) if is_divider(lines[y]) or "esc to cancel" in lines[y]),
+        None,
+    )
+    if top_div is not None and bot_div is not None and top_div + 1 <= cursor_y <= bot_div - 1:
+        return top_div + 1, bot_div - 1
+
+    # 2. Fallback: standard shell prompt (bash/zsh)
     start_y = None
-    for y in range(cursor_y, max(-1, cursor_y - 20), -1):
+    for y in range(cursor_y, -1, -1):
         line = lines[y]
-        if y < cursor_y and "─" in line:
+        if y < cursor_y and is_divider(line):
             break
-        if re.search(r'(^|\s*)([>❯$%#])\s', line):
+        if SHELL_PROMPT_RE.match(line):
             start_y = y
             break
 
     if start_y is None:
         return None
 
-    # Scan downward from cursor_y to find prompt end
     end_y = cursor_y
     while end_y + 1 < len(lines):
         next_line = lines[end_y + 1]
-        if "─" in next_line or "esc to cancel" in next_line:
+        if not next_line.strip() or is_divider(next_line) or "esc to cancel" in next_line:
             break
         end_y += 1
 
@@ -54,20 +84,17 @@ def calculate_arrow_keys(lines, cursor_x, cursor_y, mouse_x, mouse_y):
     if mouse_y < start_y or mouse_y > end_y:
         return None
 
-    # Clamp both X coordinates to visible line length:
-    # - clamped_mouse_x: snaps tap target to text end (ignores empty right margin)
-    # - clamped_cursor_x: matches where terminal lands cursor after vertical move
+    # Convert display columns to character indices (handles clamping + wide CJK/emoji)
     tapped_line = lines[mouse_y]
-    line_content_end = len(tapped_line.rstrip())
-    clamped_mouse_x = min(mouse_x, line_content_end)
-    clamped_cursor_x = min(cursor_x, line_content_end)
+    target_idx = col_to_char_idx(tapped_line, mouse_x)
+    cursor_idx = col_to_char_idx(tapped_line, cursor_x)
 
     # 1. Vertical adjustment
     delta_y = mouse_y - cursor_y
     arrow_keys = ["Down" if delta_y > 0 else "Up"] * abs(delta_y)
 
     # 2. Horizontal adjustment
-    delta_x = clamped_mouse_x - clamped_cursor_x
+    delta_x = target_idx - cursor_idx
     arrow_keys += ["Right" if delta_x > 0 else "Left"] * abs(delta_x)
 
     return arrow_keys
